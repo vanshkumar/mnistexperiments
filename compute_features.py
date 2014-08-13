@@ -39,7 +39,8 @@ class features_class:
 	def add_list_of_features(self, feature_list):
 		for feat in feature_list:
 			if "raw_pixel_" in feat:
-				self.add_one_raw_pixel(int(feat[feat.rfind("_")+1:]))
+				num = int(feat[feat.rfind("_")+1:])
+				self.add_one_raw_pixel(num)
 			else:
 				print "The feature name you gave, " + feat + \
 					  ", is not supported"

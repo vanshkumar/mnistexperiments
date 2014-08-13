@@ -13,7 +13,7 @@ class ada_boost_classifier():
 		self.feat_options = feature_options
 		self.labels = labels
 
-		self.weight = np.ones((labels.shape[0],))/labels.shape[0]
+		self.weight = np.array([1.0]*labels.shape[0])/labels.shape[0]
 		self.error = []
 		self.thresholds = []
 		self.feat_indices = []
@@ -25,7 +25,7 @@ class ada_boost_classifier():
 		predictions = self.predict(data, alpha, thresholds, signs, feat_indices)
 
 		error = (predictions != labels).astype(float)
-		error = error * weight
+		error = np.sum(error * weight)
 
 		# print "error being calculated"
 		# print thresholds
@@ -36,19 +36,16 @@ class ada_boost_classifier():
 		# print weight
 		# print error
 
-		error = np.abs(np.sum(error))
-
-		# print error
-
 		return error
 
 	def find_best_threshold(self, data, labels, weight):
 		best_threshold = -1
 		final_sign = -1
 		final_index = 0
-		lowest_error = 10000000
 
-		alpha = np.array([1])
+		lowest_error = 1000000
+		if len(self.error) > 0:
+			lowest_error = self.error[-1]
 
 		for feat_index in range(len(self.feat_options)):
 			feat_error = lowest_error
@@ -56,21 +53,21 @@ class ada_boost_classifier():
 			feat_sign = -1
 
 			for sign in (-1, 1):
-				for thresh in range(-10, 10):
-					error = self.calculate_error(data, labels, weight, \
-						alpha, np.array([thresh]), np.array([sign]), \
-						[feat_index])
-
-					#print error
+				for thresh in np.arange(-1, 1, 0.1):
+					error = self.calculate_error(data, labels, weight, [1], \
+						[thresh], [sign], [feat_index])
 
 					if error < feat_error:
 						feat_error = error
 						feat_threshold = thresh
 						feat_sign = sign
 
-			#print "With pixel " + str(feat_index) + " we have error " + str(feat_error)
+			# print "With pixel " + str(feat_index) + " we have error " + str(feat_error)
 
 			if feat_error < lowest_error:
+				print "Previous lowest error: " + str(lowest_error)
+				print "New lowest error: " + str(feat_error)
+				print "With feature index " + str(feat_index)
 				lowest_error = feat_error
 				best_threshold = feat_threshold
 				final_sign = feat_sign
@@ -91,8 +88,7 @@ class ada_boost_classifier():
 		self.feat_indices.append(index)
 
 		# Calculate the new distribution of weights
-		predictions = self.predict(self.data, np.array([1]), threshold, sign, \
-			[index])
+		predictions = self.predict(self.data, [1], threshold, sign, [index])
 
 		for i in range(len(self.weight)):
 			wt = self.weight[i]
@@ -111,18 +107,33 @@ class ada_boost_classifier():
 
 		features = feature_selector.get_features()
 
-		#print features.shape
-		#print features
+		# print "Feature indices: "
+		# print feature_names
 
-		weak_classifiers = np.zeros(features.shape)
+		# print "Predicting"
 
-		for i in range(features.shape[0]):
-			signed = np.array(signs)*features[i,:]
-			thresholded = signed - np.array(thresholds)
-			weighted = np.array(alpha)*np.sign(thresholded)
-			weak_classifiers[i, :] = weighted
+		# print features
 
-		strong_classifier = np.sign(np.sum(weak_classifiers, axis=1))
+		signed = np.multiply(features, np.array(signs))
+
+		# print "Signs"
+		# print np.array(signs)
+		# print signed
+
+		thresholded = np.subtract(signed, np.array(thresholds))
+
+		# print "Threshold"
+		# print np.array(thresholds)
+		# print thresholded
+
+		weighted = np.multiply(np.sign(thresholded), np.array(alpha))
+
+		# print "Weighted"
+		# print np.sign(thresholded)
+		# print np.array(alpha)
+		# print weighted
+
+		strong_classifier = np.sign(np.sum(weighted, axis=1))
 		strong_classifier = np.transpose(strong_classifier)
 
 		return strong_classifier
