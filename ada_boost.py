@@ -151,7 +151,7 @@ class ada_boost_classifier():
 		for i in range(max_iter):
 			self.new_classifier()
 
-			if self.error[-1] < 0.01:
+			if i > 2 and (self.error[-1] - self.error[-2]) > 0.001:
 				break
 
 	def print_parameters(self):
