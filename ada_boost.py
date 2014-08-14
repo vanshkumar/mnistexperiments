@@ -3,7 +3,7 @@ import numpy as np
 import sys
 
 from compute_features import features_class
-from math import log
+from math import sqrt, log
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
@@ -84,11 +84,19 @@ class ada_boost_classifier():
 		self.thresholds.append(threshold)
 		self.error.append(error)
 		self.signs.append(sign)
-		self.alpha.append(1/2.0 * log((1-error)/error, 10))
+
+		x = sqrt((1 - error) / error)
+
+		self.alpha.append(log(x, 10))
 		self.feat_indices.append(index)
 
+		print ''
+		pred = self.predict(self.data, self.alpha, self.thresholds, self.signs, self.feat_indices)
+		print "Non-weighted error: " + str(np.sum(pred != self.labels)/float(self.labels.shape[0]))
+		print ''
+
 		# Calculate the new distribution of weights
-		predictions = self.predict(self.data, [1], threshold, sign, [index])
+		predictions = self.predict(self.data, [1], [threshold], [sign], [index])
 
 		for i in range(len(self.weight)):
 			wt = self.weight[i]
@@ -96,9 +104,10 @@ class ada_boost_classifier():
 			label = self.labels[i]
 
 			if pred == label:
-				self.weight[i] = wt / (2 * (1 - error))
+				self.weight[i] = wt / x
 			else:
-				self.weight[i] = wt / (2 * error)
+				self.weight[i] = wt * x
+		self.weight /= np.sum(self.weight)
 
 	def predict(self, data, alpha, thresholds, signs, feat_indices):
 		feature_selector = features_class(data)
